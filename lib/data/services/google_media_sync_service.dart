@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 class GoogleMediaSyncService {
@@ -21,7 +21,7 @@ class GoogleMediaSyncService {
 
   Future<String?> uploadMedia(File file) async {
     final account = _signIn.currentUser ?? await signIn();
-    final client = await account?.authenticatedClient();
+    final client = await _authenticatedClient(account);
     if (client == null) {
       return null;
     }
@@ -43,7 +43,7 @@ class GoogleMediaSyncService {
 
   Future<List<drive.File>> listRecentMedia() async {
     final account = _signIn.currentUser ?? await signIn();
-    final client = await account?.authenticatedClient();
+    final client = await _authenticatedClient(account);
     if (client == null) {
       return [];
     }
@@ -89,5 +89,39 @@ class GoogleMediaSyncService {
       return 'video/${extension.replaceFirst('.', '')}';
     }
     return 'application/octet-stream';
+  }
+
+  Future<http.Client?> _authenticatedClient(
+    GoogleSignInAccount? account,
+  ) async {
+    if (account == null) {
+      return null;
+    }
+
+    final headers = await account.authHeaders;
+    if (headers.isEmpty) {
+      return null;
+    }
+
+    return _GoogleAuthClient(headers);
+  }
+}
+
+class _GoogleAuthClient extends http.BaseClient {
+  _GoogleAuthClient(this._headers);
+
+  final Map<String, String> _headers;
+  final http.Client _inner = http.Client();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    request.headers.addAll(_headers);
+    return _inner.send(request);
+  }
+
+  @override
+  void close() {
+    _inner.close();
+    super.close();
   }
 }
