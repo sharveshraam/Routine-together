@@ -56,7 +56,7 @@ class AppTheme {
 
     return base.copyWith(
       textTheme: textTheme,
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white.withOpacity(0.78),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
