@@ -26,7 +26,7 @@ class SettingsPage extends ConsumerWidget {
               const SectionTitle(
                 title: 'Settings',
                 subtitle:
-                    'Local pairing, encrypted backups, and Google Drive media sync live here.',
+                    'Local pairing, encrypted backups, and device media live here.',
               ),
               const SizedBox(height: 18),
               GlassCard(
@@ -92,29 +92,18 @@ class SettingsPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SectionTitle(
-                      title: 'Google Drive media',
+                      title: 'Media attachments',
                       subtitle:
-                          'Only media uses the cloud. Habit, journal, and note data stay local.',
+                          'Media stays on device in this release. Cloud sync can be added later.',
                     ),
                     const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _connectGoogle(context, ref),
-                            icon: const Icon(Icons.account_circle_outlined),
-                            label: const Text('Connect Google'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _uploadMedia(context, ref),
-                            icon: const Icon(Icons.cloud_upload_outlined),
-                            label: const Text('Upload media'),
-                          ),
-                        ),
-                      ],
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _uploadMedia(context, ref),
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
+                        label: const Text('Add media from device'),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     if (state.mediaAssets.isEmpty)
@@ -141,21 +130,6 @@ class SettingsPage extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(child: Text(error.toString())),
     );
-  }
-
-  Future<void> _connectGoogle(BuildContext context, WidgetRef ref) async {
-    try {
-      final email = await ref.read(appControllerProvider.notifier).connectGoogleDrive();
-      if (!context.mounted) {
-        return;
-      }
-      final message = email == null
-          ? 'Google sign-in was cancelled or still needs OAuth setup.'
-          : 'Connected as $email';
-      _showMessage(context, message);
-    } catch (error) {
-      _showMessage(context, error.toString());
-    }
   }
 
   Future<void> _uploadMedia(BuildContext context, WidgetRef ref) async {

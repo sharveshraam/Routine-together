@@ -23,10 +23,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
 
-  AuthMethod _authMethod = AuthMethod.google;
+  AuthMethod _authMethod = AuthMethod.email;
   DateTime _sinceDate = DateTime.now().subtract(const Duration(days: 196));
   bool _submitting = false;
-  String? _googleEmail;
 
   @override
   void dispose() {
@@ -67,26 +66,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     _showMessage('Mock OTP for demo: $code');
   }
 
-  Future<void> _connectGoogle() async {
-    try {
-      final account = await ref.read(googleMediaSyncServiceProvider).signIn();
-      final email = account?.email;
-      if (!mounted) {
-        return;
-      }
-      if (email == null) {
-        _showMessage('Google sign-in was cancelled or still needs OAuth setup.');
-        return;
-      }
-      setState(() {
-        _googleEmail = email;
-      });
-      _showMessage('Connected as $email');
-    } catch (_) {
-      _showMessage('Google sign-in needs Android OAuth setup before it can run.');
-    }
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -117,7 +96,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               phone: _authMethod == AuthMethod.phone ? _phoneController.text : null,
               password:
                   _authMethod == AuthMethod.email ? _passwordController.text : null,
-              googleEmail: _authMethod == AuthMethod.google ? _googleEmail : null,
             ),
           );
     } catch (error) {
@@ -205,11 +183,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     SegmentedButton<AuthMethod>(
                       segments: const [
                         ButtonSegment(
-                          value: AuthMethod.google,
-                          label: Text('Google'),
-                          icon: Icon(Icons.account_circle_outlined),
-                        ),
-                        ButtonSegment(
                           value: AuthMethod.email,
                           label: Text('Email'),
                           icon: Icon(Icons.mail_outline_rounded),
@@ -296,30 +269,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _buildAuthFields() {
     switch (_authMethod) {
-      case AuthMethod.google:
-        return GlassCard(
-          key: const ValueKey('google'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SectionTitle(
-                title: 'Google sign-in',
-                subtitle:
-                    'Use Google for identity and later Google Drive media sync. Offline data still stays on device.',
-              ),
-              const SizedBox(height: 16),
-              GradientButton(
-                label: _googleEmail == null ? 'Connect Google' : 'Reconnect Google',
-                icon: Icons.g_mobiledata_rounded,
-                onPressed: _connectGoogle,
-              ),
-              if (_googleEmail != null) ...[
-                const SizedBox(height: 12),
-                Text('Connected: $_googleEmail'),
-              ],
-            ],
-          ),
-        );
       case AuthMethod.email:
         return Column(
           key: const ValueKey('email'),
@@ -403,6 +352,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             ),
           ],
         );
+      case AuthMethod.google:
+        return const SizedBox.shrink();
     }
   }
 }

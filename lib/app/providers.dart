@@ -5,7 +5,6 @@ import 'package:duobloom_mobile/data/models/app_models.dart';
 import 'package:duobloom_mobile/data/repositories/app_repository.dart';
 import 'package:duobloom_mobile/data/services/auth_service.dart';
 import 'package:duobloom_mobile/data/services/backup_service.dart';
-import 'package:duobloom_mobile/data/services/google_media_sync_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -23,10 +22,6 @@ final uuidProvider = Provider<Uuid>((ref) => const Uuid());
 
 final authServiceProvider = Provider<AuthService>(
   (ref) => AuthService(ref.watch(secureStorageProvider)),
-);
-
-final googleMediaSyncServiceProvider = Provider<GoogleMediaSyncService>(
-  (ref) => GoogleMediaSyncService(),
 );
 
 final appRepositoryProvider = Provider<AppRepository>(
@@ -48,8 +43,6 @@ class AppController extends AsyncNotifier<AppState> {
   AppRepository get _repository => ref.read(appRepositoryProvider);
   AuthService get _authService => ref.read(authServiceProvider);
   BackupService get _backupService => ref.read(backupServiceProvider);
-  GoogleMediaSyncService get _googleService =>
-      ref.read(googleMediaSyncServiceProvider);
 
   @override
   Future<AppState> build() => _loadState();
@@ -100,12 +93,6 @@ class AppController extends AsyncNotifier<AppState> {
   Future<void> completeOnboarding(OnboardingData data) async {
     state = const AsyncLoading();
 
-    String? googleEmail = data.googleEmail;
-    if (data.authMethod == AuthMethod.google && googleEmail == null) {
-      final account = await _googleService.signIn();
-      googleEmail = account?.email;
-    }
-
     final passwordHash = data.password == null || data.password!.isEmpty
         ? null
         : _authService.hashPassword(data.password!);
@@ -113,7 +100,7 @@ class AppController extends AsyncNotifier<AppState> {
     await _repository.createCouple(
       data: data,
       passwordHash: passwordHash,
-      googleEmail: googleEmail,
+      googleEmail: null,
     );
 
     await refresh();
@@ -244,22 +231,6 @@ class AppController extends AsyncNotifier<AppState> {
     await refresh();
   }
 
-  Future<String?> connectGoogleDrive() async {
-    final currentProfile = state.valueOrNull?.currentProfile;
-    if (currentProfile == null) {
-      return null;
-    }
-
-    final account = await _googleService.signIn();
-    if (account == null) {
-      return null;
-    }
-
-    await _repository.attachGoogleEmail(currentProfile.id, account.email);
-    await refresh();
-    return account.email;
-  }
-
   Future<String?> uploadMediaToDrive({String? journalEntryId}) async {
     final profile = state.valueOrNull?.currentProfile;
     if (profile == null) {
@@ -275,19 +246,14 @@ class AppController extends AsyncNotifier<AppState> {
       return null;
     }
 
-    final driveFileId = await _googleService.uploadMedia(File(path));
-    if (driveFileId == null) {
-      return null;
-    }
-
     await _repository.addMediaAsset(
       profileId: profile.id,
       localPath: path,
-      driveFileId: driveFileId,
+      driveFileId: null,
       journalEntryId: journalEntryId,
     );
     await refresh();
-    return driveFileId;
+    return path;
   }
 
   Future<File?> exportBackup(String password) async {
